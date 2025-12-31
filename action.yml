@@ -77,18 +77,6 @@ inputs:
     description: "Use just one comment to deliver issue/PR comments"
     required: false
     default: "false"
-  sticky_comment_app_bot_id:
-    description: "The ID of the app bot that will be used to create the sticky comment. Defaults to the Claude app bot ID."
-    required: false
-    default: "209825114"
-  sticky_comment_app_bot_name:
-    description: "The name of the app bot that will be used to create the sticky comment. Defaults to 'claude'."
-    required: false
-    default: "claude"
-  sticky_comment_matching_strategy:
-    description: "Strategy for matching existing sticky comments: 'id_or_name' (match by ID OR name OR body - default), 'id_and_name' (match by ID AND name, allowing multiple comments per bot by changing name)"
-    required: false
-    default: "id_or_name"
   use_commit_signing:
     description: "Enable commit signing using GitHub's commit signature verification. When false, Claude uses standard git commands"
     required: false
@@ -105,6 +93,10 @@ inputs:
     description: "Force tag mode with tracking comments for pull_request and issue events. Only applicable to pull_request (opened, synchronize, ready_for_review, reopened) and issue (opened, edited, labeled, assigned) events."
     required: false
     default: "false"
+  include_fix_links:
+    description: "Include 'Fix this' links in PR code review feedback that open Claude Code with context to fix the identified issue"
+    required: false
+    default: "true"
   path_to_claude_code_executable:
     description: "Optional path to a custom Claude Code executable. If provided, skips automatic installation and uses this executable instead. WARNING: Using an older version may cause problems if the action begins taking advantage of new Claude Code features. This input is typically not needed unless you're debugging something specific or have unique needs in your environment."
     required: false
@@ -139,6 +131,9 @@ outputs:
   structured_output:
     description: "JSON string containing all structured output fields when --json-schema is provided in claude_args. Use fromJSON() to parse: fromJSON(steps.id.outputs.structured_output).field_name"
     value: ${{ steps.claude-code.outputs.structured_output }}
+  session_id:
+    description: "The Claude Code session ID that can be used with --resume to continue this conversation"
+    value: ${{ steps.claude-code.outputs.session_id }}
 
 runs:
   using: "composite"
@@ -184,14 +179,12 @@ runs:
         ALLOWED_NON_WRITE_USERS: ${{ inputs.allowed_non_write_users }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         USE_STICKY_COMMENT: ${{ inputs.use_sticky_comment }}
-        STICKY_COMMENT_APP_BOT_ID: ${{ inputs.sticky_comment_app_bot_id }}
-        STICKY_COMMENT_APP_BOT_NAME: ${{ inputs.sticky_comment_app_bot_name }}
-        STICKY_COMMENT_MATCHING_STRATEGY: ${{ inputs.sticky_comment_matching_strategy }}
         DEFAULT_WORKFLOW_TOKEN: ${{ github.token }}
         USE_COMMIT_SIGNING: ${{ inputs.use_commit_signing }}
         BOT_ID: ${{ inputs.bot_id }}
         BOT_NAME: ${{ inputs.bot_name }}
         TRACK_PROGRESS: ${{ inputs.track_progress }}
+        INCLUDE_FIX_LINKS: ${{ inputs.include_fix_links }}
         ADDITIONAL_PERMISSIONS: ${{ inputs.additional_permissions }}
         CLAUDE_ARGS: ${{ inputs.claude_args }}
         ALL_INPUTS: ${{ toJson(inputs) }}
@@ -210,7 +203,7 @@ runs:
 
         # Install Claude Code if no custom executable is provided
         if [ -z "$PATH_TO_CLAUDE_CODE_EXECUTABLE" ]; then
-          CLAUDE_CODE_VERSION="2.0.62"
+          CLAUDE_CODE_VERSION="2.0.76"
           echo "Installing Claude Code v${CLAUDE_CODE_VERSION}..."
           for attempt in 1 2 3; do
             echo "Installation attempt $attempt..."
@@ -259,6 +252,7 @@ runs:
 
         # Model configuration
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
         NODE_VERSION: ${{ env.NODE_VERSION }}
         DETAILED_PERMISSION_MESSAGES: "1"
 
@@ -308,6 +302,7 @@ runs:
         CLAUDE_COMMENT_ID: ${{ steps.prepare.outputs.claude_comment_id }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
         GITHUB_EVENT_NAME: ${{ github.event_name }}
         TRIGGER_COMMENT_ID: ${{ github.event.comment.id }}
         CLAUDE_BRANCH: ${{ steps.prepare.outputs.CLAUDE_BRANCH }}
@@ -319,8 +314,6 @@ runs:
         PREPARE_SUCCESS: ${{ steps.prepare.outcome == 'success' }}
         PREPARE_ERROR: ${{ steps.prepare.outputs.prepare_error || '' }}
         USE_STICKY_COMMENT: ${{ inputs.use_sticky_comment }}
-        STICKY_COMMENT_APP_BOT_ID: ${{ inputs.sticky_comment_app_bot_id }}
-        STICKY_COMMENT_APP_BOT_NAME: ${{ inputs.sticky_comment_app_bot_name }}
         USE_COMMIT_SIGNING: ${{ inputs.use_commit_signing }}
         TRACK_PROGRESS: ${{ inputs.track_progress }}
 

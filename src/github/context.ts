@@ -95,9 +95,7 @@ type BaseContext = {
     allowedBots: string;
     allowedNonWriteUsers: string;
     trackProgress: boolean;
-    stickyCommentAppBotId: number;
-    stickyCommentAppBotName: string;
-    stickyCommentMatchingStrategy: "id_or_name" | "id_and_name";
+    includeFixLinks: boolean;
   };
 };
 
@@ -153,15 +151,7 @@ export function parseGitHubContext(): GitHubContext {
       allowedBots: process.env.ALLOWED_BOTS ?? "",
       allowedNonWriteUsers: process.env.ALLOWED_NON_WRITE_USERS ?? "",
       trackProgress: process.env.TRACK_PROGRESS === "true",
-      stickyCommentAppBotId: parseInt(
-        process.env.STICKY_COMMENT_APP_BOT_ID ?? "209825114",
-      ),
-      stickyCommentAppBotName:
-        process.env.STICKY_COMMENT_APP_BOT_NAME ?? "claude",
-      stickyCommentMatchingStrategy:
-        (process.env.STICKY_COMMENT_MATCHING_STRATEGY as
-          | "id_or_name"
-          | "id_and_name") ?? "id_or_name",
+      includeFixLinks: process.env.INCLUDE_FIX_LINKS === "true",
     },
   };
 

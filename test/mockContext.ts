@@ -12,12 +12,6 @@ import type {
 } from "@octokit/webhooks-types";
 import { CLAUDE_APP_BOT_ID, CLAUDE_BOT_LOGIN } from "../src/github/constants";
 
-export const defaultStickyCommentInputs = {
-  stickyCommentAppBotId: 209825114,
-  stickyCommentAppBotName: "claude",
-  stickyCommentMatchingStrategy: "id_or_name" as const,
-};
-
 const defaultInputs = {
   prompt: "",
   triggerPhrase: "/claude",
@@ -25,13 +19,13 @@ const defaultInputs = {
   labelTrigger: "",
   branchPrefix: "claude/",
   useStickyComment: false,
-  ...defaultStickyCommentInputs,
   useCommitSigning: false,
   botId: String(CLAUDE_APP_BOT_ID),
   botName: CLAUDE_BOT_LOGIN,
   allowedBots: "",
   allowedNonWriteUsers: "",
   trackProgress: false,
+  includeFixLinks: true,
 };
 
 const defaultRepository = {

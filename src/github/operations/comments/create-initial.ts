@@ -21,12 +21,11 @@ export async function createInitialComment(
   const { owner, repo } = context.repository;
 
   const jobRunLink = createJobRunLink(owner, repo, context.runId);
+  // Add hidden header with bot name for sticky comment identification
   const initialBody = createCommentBody(
     jobRunLink,
     "",
-    context.inputs.stickyCommentMatchingStrategy === "id_and_name"
-      ? context.inputs.stickyCommentAppBotName
-      : "",
+    context.inputs.useStickyComment ? context.inputs.botName : "",
   );
 
   try {
@@ -43,28 +42,21 @@ export async function createInitialComment(
         issue_number: context.entityNumber,
       });
       const existingComment = comments.data.find((comment) => {
-        const idMatch =
-          comment.user?.id === context.inputs.stickyCommentAppBotId;
-        
-        // Check for hidden header match if using id_and_name strategy
-        const hiddenHeader = `<!-- bot: ${context.inputs.stickyCommentAppBotName} -->`;
+        const idMatch = comment.user?.id === Number(context.inputs.botId);
+
+        // Check for hidden header match to support multiple bots
+        const hiddenHeader = `<!-- bot: ${context.inputs.botName} -->`;
         const headerMatch = comment.body?.includes(hiddenHeader);
 
         const botNameMatch =
           comment.user?.type === "Bot" &&
           comment.user?.login
             .toLowerCase()
-            .includes(context.inputs.stickyCommentAppBotName);
+            .includes(context.inputs.botName.toLowerCase());
         const bodyMatch = comment.body === initialBody;
 
-        // 'id_and_name': Require both ID AND name to match.
-        // We prioritize the hidden header match for robust name matching.
-        // Fallback to login name match if header not found (for backward compatibility).
-        // 'id_or_name': Match by ID OR name OR body.
-        if (context.inputs.stickyCommentMatchingStrategy === "id_and_name") {
-          return (idMatch && (headerMatch || botNameMatch)) || bodyMatch;
-        }
-        return idMatch || botNameMatch || bodyMatch;
+        // Match by ID OR hidden header OR bot name OR body
+        return idMatch || headerMatch || botNameMatch || bodyMatch;
       });
       if (existingComment) {
         response = await octokit.rest.issues.updateComment({

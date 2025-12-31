@@ -25,9 +25,7 @@ describe("detectMode with enhanced routing", () => {
       allowedBots: "",
       allowedNonWriteUsers: "",
       trackProgress: false,
-      stickyCommentAppBotId: 209825114,
-      stickyCommentAppBotName: "claude",
-      stickyCommentMatchingStrategy: "id_or_name" as const,
+      includeFixLinks: true,
     },
   };
 
